@@ -1,3 +1,3 @@
 To start the app:
 
-docker-compose up
+docker-compose up -d
