@@ -1,4 +1,5 @@
 const express = require('express')
+const mysql = require('mysql')
 const app = express()
 const port = 3000
 const config = {
@@ -8,31 +9,57 @@ const config = {
     database: 'nodedb'
 };
 
-const mysql = require('mysql')
 const connection = mysql.createConnection(config)
 
-const sqlCreate =  `CREATE TABLE IF NOT EXISTS people (id INT auto_increment, name VARCHAR(255), primary key (id))`
-connection.query(sqlCreate)
-
-const sqlInsert = `INSERT INTO people(name) values('Gabriel'),('Fernando'),('Wesley')`
-connection.query(sqlInsert)
-
-const sqlPeople = `SELECT * FROM people`
-connection.query(sqlPeople, (error,rows) => {
-    if(error) {
-        console.error('Erro ao selecionar da tabela people: ', err);
-        return;
+// Conecta ao banco de dados
+connection.connect((err) => {
+    if (err) {
+      console.error('Erro ao conectar ao banco de dados:', err);
+      return;
     }
-
-    connection.end();
-
-    app.get('/', (req, res) => {
+    console.log('Conexão ao banco de dados MySQL estabelecida');
+    
+    // Criação da tabela "people" se não existir
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS people (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255)
+      )
+    `;
+    connection.query(createTableQuery, (err, result) => {
+      if (err) {
+        console.error('Erro ao criar tabela:', err);
+        return;
+      }
+      console.log('Tabela "people" criada com sucesso ou já existente');
+      
+      // Insere dados na tabela "people"
+      const insertQuery = `INSERT INTO people (name) VALUES ('Gabriel'), ('Wesley'), ('Full Cycle')`;
+      connection.query(insertQuery, (err, result) => {
+        if (err) {
+          console.error('Erro ao inserir dados na tabela:', err);
+          return;
+        }
+        console.log('Dados inseridos na tabela "people" com sucesso');
         
-        const resultHtml = `<h1>Full Cycle Rocks!</h1></br><p>${JSON.stringify(rows)}</p>`;
-        res.send(resultHtml);
-    });
+        // Define um endpoint HTTP para retornar os nomes da tabela
+        app.get('/', (req, res) => {
+          const selectQuery = `SELECT name FROM people`;
+          connection.query(selectQuery, (err, result) => {
+            if (err) {
+              console.error('Erro ao selecionar dados da tabela:', err);
+              res.status(500).json({ error: 'Erro ao selecionar dados da tabela' });
+              return;
+            }
+            const names = result.map(row => row.name);
+            const html = `<h1>Full Cycle Rocks!</h1><ul>${names.map(name => `<li>${name}</li>`).join('')}</ul>`;
+            res.send(html);
+          });
+        });
 
-    app.listen(port, () => {
-        console.log(`Servidor rodando em http://localhost:${port}`);
+        app.listen(port, () => {
+            console.log(`Servidor rodando em http://localhost:${port}`);
+        });
+      });
     });
-});
+  });

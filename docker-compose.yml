@@ -13,8 +13,8 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - node
-      - db
+      db:
+        condition: service_healthy
   
   node:
     build:
@@ -30,7 +30,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:5.7
@@ -43,6 +44,11 @@ services:
     environment:
       - MYSQL_DATABASE=nodedb
       - MYSQL_ROOT_PASSWORD=devops
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - node-network
 
